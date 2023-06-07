@@ -274,6 +274,7 @@ void * kmalloc(uint32 size) {
 /* ========================================================================= */
 
 int kfree(void * ptr) {
+    printk(LOG_DEBUG, "kfree(): Freeing 0x%x\n", ptr);
     block_header * to_free_block = (block_header*)ptr - 1;
     block_trailer * to_free_trailer = (block_trailer*)((char*)to_free_block + sizeof(block_header) + 
             to_free_block->size);
