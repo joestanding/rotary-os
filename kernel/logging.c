@@ -1,9 +1,13 @@
 #include <rotary/logging.h>
 
+volatile atomic_flag print_lock = ATOMIC_FLAG_INIT;
+
 /* ========================================================================= */
 
 //TODO: make this not bad
 void _printk(uint8 level, char * tag, char * message) {
+
+
     char final_message[512];
     char vga_message[512];
     char final_tag[16];
@@ -26,11 +30,17 @@ void _printk(uint8 level, char * tag, char * message) {
         vga_ptr++;
     }
 
+    // Take exclusive control of printing to video output and serial
+    lock(&print_lock);
+
     // Write this message to the screen
     vga_printf(vga_message);
 
     // Write this to the serial output
     serial_write_line(final_message);
+
+    // Release control so others can print
+    unlock(&print_lock);
 }
 
 /* ========================================================================= */

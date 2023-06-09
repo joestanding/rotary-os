@@ -6,6 +6,7 @@
 #include <rotary/types.h>
 #include <rotary/vga.h>
 #include <rotary/serial.h>
+#include <rotary/sync.h>
 
 /* ========================================================================= */
 
