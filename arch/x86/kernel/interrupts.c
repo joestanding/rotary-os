@@ -133,9 +133,12 @@ void isr_handler(isr_registers * registers) {
             if(shadow_stack) {
                 vga_printf("The fault was caused by a shadow-stack access.");
             }
-
-            debug_break();
         }
+
+        // In normal OS operation we'd handle these exceptions gracefully, but as we're early
+        // in development we'll pause to debug this
+        printk(LOG_DEBUG, "Pausing CPU..\n");
+        debug_break();
     }
 
     // Send an End of Interrupt signal to the PICs, if needed.
