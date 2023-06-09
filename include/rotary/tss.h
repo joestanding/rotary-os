@@ -36,6 +36,9 @@ typedef struct {
 /* ========================================================================= */
 
 extern void tss_flush();
-void tss_init();
+uint32 tss_init();
+uint32 tss_set_esp0(void * esp0);
+uint32 tss_set_ss0(uint32 ss0);
+tss * tss_get();
 
 /* ========================================================================= */
