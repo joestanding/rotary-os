@@ -7,25 +7,11 @@ extern void isr_exit();
 // Variables                                                                 //
 // ========================================================================= // 
 
+volatile atomic_flag task_lock = ATOMIC_FLAG_INIT;
 uint32 last_task_id = 1;
 uint8  scheduler_ready = 0;
 task   tasks[TASK_MAX];
 task * current_task;
-
-// ========================================================================= //
-// Test Functions                                                            //
-// ========================================================================= // 
-
-void test1() {
-    while(true) {
-        //char * die = 0xB0000000;
-        //printk(LOG_DEBUG, "die: 0x%x\n", *die);
-    }
-}
-
-void test2() {
-    while(true) { }
-}
 
 // ========================================================================= //
 // Functions                                                                 //
@@ -41,9 +27,6 @@ uint32 task_init() {
     strncpy(idle_task->name, "kernel_idle", 16);
     current_task = idle_task;
 
-    task_create("test1", TASK_KERNEL, &test1);
-    task_create("test2", TASK_KERNEL, &test2);
-    
     // Enable the scheduler (otherwise PIT interrupts may trigger it before it's ready)
     printk(LOG_DEBUG, "Enabling scheduler\n");
     scheduler_ready = 1;
@@ -53,22 +36,46 @@ uint32 task_init() {
 
 // ========================================================================= // 
 
-task * task_create(char * name, uint32 type, void * start_addr) {
-    printk(LOG_DEBUG, "Creating task %d (name: %s addr: 0x%x)\n", last_task_id, name, start_addr);
+task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
+    printk(LOG_DEBUG, "task_create(): Creating task %d (name: %s addr: 0x%x)\n", last_task_id, name, start_addr);
 
-    uint32 task_id = last_task_id;
-    tasks[task_id].id         = task_id;
-    strncpy(tasks[task_id].name, name, 16);
-
-    void * kernel_stack = kmalloc(TASK_STACK_SIZE);
-    if((uint32)kernel_stack == KMALLOC_FAIL) {
-        printk(LOG_DEBUG, "Failed to allocate memory for the kernel stack!\n");
-        return (void*)-1;
+    if(state != TASK_STATE_PAUSED && state != TASK_STATE_WAITING) {
+        printk(LOG_DEBUG, "task_create(): Invalid starting state, can only be WAITING or PAUSED!\n");
+        return (void*)1;
     }
 
-    tasks[task_id].kernel_esp = (uint32)(kernel_stack + TASK_STACK_SIZE);
-    tasks[task_id].kernel_ebp = (uint32)(kernel_stack + TASK_STACK_SIZE);
-    printk(LOG_DEBUG, "Task kernel stack allocated at 0x%x\n", kernel_stack);
+    // Take exclusive control of the task structure
+    lock(&task_lock);
+
+    uint32 task_id = last_task_id;
+    memset(&tasks[task_id], 0, sizeof(task));
+    tasks[task_id].id = task_id;
+    strncpy(tasks[task_id].name, name, 16);
+
+    // Allocate memory from the kernel heap
+    void * kernel_stack = kmalloc(TASK_STACK_SIZE);
+    if((uint32)kernel_stack == KMALLOC_FAIL) {
+        printk(LOG_DEBUG, "task_create(): Failed to allocate memory for the kernel stack!\n");
+        return (void*)0;
+    }
+
+    // Store some information about the kernel stack allocation
+    tasks[task_id].stack_frame = kernel_stack;
+    tasks[task_id].kernel_esp = kernel_stack + TASK_STACK_SIZE;
+    tasks[task_id].kernel_ebp = kernel_stack + TASK_STACK_SIZE;
+    printk(LOG_DEBUG, "task_create(): Task kernel stack allocated at 0x%x\n", kernel_stack);
+
+    if(type == TASK_KERNEL) {
+        printk(LOG_DEBUG, "task_create(): Task is a kernel task, assigning kernel PDE\n");
+        tasks[task_id].cr3 = (uint32)vmm_kernel_pd;
+    } else {
+        printk(LOG_DEBUG, "task_create(): Task is a user task, creating new PDE\n");
+        // Create a new page directory for the task
+        page_directory_entry * page_directory = (page_directory_entry*)pmm_alloc_frame();
+        paging_init_directory(page_directory);
+        tasks[task_id].cr3 = (uint32)page_directory;
+        printk(LOG_DEBUG, "task_create(): Task page directory allocated at 0x%x\n", page_directory);
+    }
 
     // Set-up the new kernel stack for the task. The kernel stack will need to contain
     // null-initialised register values that will be popped off the stack by the task
@@ -95,19 +102,112 @@ task * task_create(char * name, uint32 type, void * start_addr) {
     context->ebp = 0;
     context->eip = (uint32)&isr_exit;
 
-    tasks[task_id].state = TASK_STATE_WAITING;
+    // Set the state of the task so it's ready to be scheduled
+    tasks[task_id].state = state;
 
     last_task_id++;
+
+    // Relinquish control of the taks structure
+    unlock(&task_lock);
+
     return &tasks[task_id];
 }
 
-// ========================================================================= // 
+/* ========================================================================= */
+
+uint32 task_kill(uint32 task_id) {
+    if(task_id < 0 || task_id > TASK_MAX) {
+        printk(LOG_DEBUG, "task_kill(): Task ID %d is out of bounds!\n", task_id);
+        return 0;
+    }
+
+    if(task_id == 0) {
+        printk(LOG_DEBUG, "task_kill(): You cannot kill the idle process (ID 0)!\n", task_id);
+        return 0;
+    }
+
+    task * task_tk = &tasks[task_id];
+    if(task_tk->state == TASK_STATE_EMPTY) {
+        printk(LOG_DEBUG, "task_kill(): Task ID %d is not an existing task!\n", task_id);
+        return 0;
+    }
+
+    if(task_tk->state != TASK_STATE_RUNNING &&
+       task_tk->state != TASK_STATE_WAITING &&
+       task_tk->state != TASK_STATE_PAUSED) {
+        printk(LOG_DEBUG, "task_kill(): Task ID %d is not in a killable state!\n", task_id);
+        return 0;
+    }
+
+    printk(LOG_DEBUG, "task_kill(): Killing task '%s' (ID: %d)..\n", task_tk->name, task_id);
+
+    // Update state so we don't schedule this task anymore. The OS will
+    // decide when to clear its resources such as allocated memory.
+    task_tk->state = TASK_STATE_KILLED;
+   
+    printk(LOG_DEBUG, "task_kill(): Marked task ID %d as killed\n", task_id);
+    return 1;
+}
+
+/* ========================================================================= */
+
+uint32 task_purge(uint32 task_id) {
+    if(task_id < 0 || task_id > TASK_MAX) {
+        printk(LOG_DEBUG, "task_purge(): Task ID %d is out of bounds!\n", task_id);
+        return 0;
+    }
+
+    if(task_id == 0) {
+        printk(LOG_DEBUG, "task_kill(): You cannot purge the idle process (ID 0)!\n", task_id);
+        return 0;
+    }
+
+    task * task_tk = &tasks[task_id];
+    if(task_tk->state != TASK_STATE_KILLED) {
+        printk(LOG_DEBUG, "task_kill(): Task ID %d is not a killed task!\n", task_id);
+        return 0;
+    }
+
+    printk(LOG_DEBUG, "task_purge(): Purging task ID %d\n", task_id);
+
+    // Reset this tasks's state
+    task_tk->state = TASK_STATE_EMPTY;
+
+    // Free memory allocated for this task
+    if(!kfree(task_tk->stack_frame)) {
+        printk(LOG_DEBUG, "task_purge(): Failed to kfree() task's stack at 0x%x!\n",
+                task_tk->stack_frame);
+    }
+
+    // Reset the rest of the task struct
+    task_tk->kernel_esp = (void*)NULL;
+    task_tk->kernel_ebp = (void*)NULL;
+    task_tk->stack_frame = (void*)NULL;
+    task_tk->cr3 = NULL;
+    task_tk->ticks = NULL;
+
+    printk(LOG_DEBUG, "task_kill(): Purged task ID %d\n", task_id);
+
+    return 1;
+}
+
+/* ========================================================================= */
+
+uint32 task_exit_current() {
+    printk(LOG_DEBUG, "task_exit(): Exiting task '%s'\n", current_task->name);
+    lock(&task_lock);
+    current_task->state = TASK_STATE_KILLED;
+    unlock(&task_lock);
+    return 1;
+}
+
+/* ========================================================================= */
 
 task * task_get_current() {
     return current_task;
 }
 
-// ========================================================================= // 
+/* ========================================================================= */
 
 void task_schedule() {
     // Don't allow task switching before everything's set up
@@ -117,11 +217,22 @@ void task_schedule() {
     // Count CPU ticks for this task
     current_task->ticks += 1;
 
+    // TODO: Review whether this is actually a good place to put this
+    for(uint32 task_id = 0; task_id < TASK_MAX; task_id++) {
+        if(tasks[task_id].state == TASK_STATE_KILLED) {
+            printk(LOG_DEBUG, "task_schedule(): Found KILLED task (%d) awaiting purge\n", task_id);
+            task_purge(task_id);
+        }
+    }
+
     // Identify the next task, naive implementation for now
     uint32 next_task_id = current_task->id + 1;
     if(next_task_id == 256) next_task_id = 0;
 
-    while(tasks[next_task_id].state == TASK_STATE_EMPTY) {
+    // TODO: Replace
+    while(tasks[next_task_id].state == TASK_STATE_EMPTY ||
+          tasks[next_task_id].state == TASK_STATE_PAUSED ||
+          tasks[next_task_id].state == TASK_STATE_KILLED) {
         next_task_id += 1;
         if(next_task_id == 9) next_task_id = 0;
     }
@@ -131,13 +242,16 @@ void task_schedule() {
     current_task = next;
 
     // Update states
-    prev->state = TASK_STATE_WAITING;
+    if(prev->state == TASK_STATE_RUNNING) {
+        prev->state = TASK_STATE_WAITING;
+    }
     next->state = TASK_STATE_RUNNING;
 
+    // Call our assembly routine to conduct the actual task switch
     task_switch(prev, next);
 }
 
-// ========================================================================= // 
+/* ========================================================================= */
 
 void task_print() {
     printk(LOG_DEBUG, "Task List\n");
@@ -152,10 +266,12 @@ void task_print() {
             sprintf(state, "%s", "RUNNING");
         if(tasks[i].state == TASK_STATE_WAITING)
             sprintf(state, "%s", "WAITING");
+        if(tasks[i].state == TASK_STATE_PAUSED)
+            sprintf(state, "%s", "PAUSED");
+        if(tasks[i].state == TASK_STATE_KILLED)
+            sprintf(state, "%s", "KILLED");
         if(tasks[i].state != TASK_STATE_EMPTY) {
-            printk(LOG_DEBUG, "[%d] name:   %s\n", i, tasks[i].name);
-            printk(LOG_DEBUG, "     state:  %s\n", state);
-            printk(LOG_DEBUG, "     k_esp:  0x%x\n", tasks[i].kernel_esp);
+            printk(LOG_DEBUG, "[%d] name:   %s   (%s)\n", i, tasks[i].name, state);
             printk(LOG_DEBUG, "     k_ebp:  0x%x\n", tasks[i].kernel_ebp);
             printk(LOG_DEBUG, "     stack:  %d\n", tasks[i].kernel_ebp - tasks[i].kernel_esp);
             printk(LOG_DEBUG, "     cr3:    0x%x\n", tasks[i].cr3);
@@ -165,4 +281,4 @@ void task_print() {
     printk(LOG_DEBUG, "\n");
 }
 
-// ========================================================================= // 
+/* ========================================================================= */
