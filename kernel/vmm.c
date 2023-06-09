@@ -3,7 +3,9 @@
 extern uint32 KERNEL_VIRT_END;
 
 page_directory_entry * vmm_current_pd = NULL;
+page_directory_entry * vmm_kernel_pd = NULL;
 void * heap_start_vaddr = NULL;
+void * heap_end_vaddr = NULL;
 
 /* ========================================================================= */
 /* Virtual Memory Management                                                 */
@@ -11,7 +13,8 @@ void * heap_start_vaddr = NULL;
 
 uint32 vmm_init() {
     // Allocate a physical page for our default page directory
-    vmm_current_pd = (page_directory_entry*)pmm_alloc_frame();
+    vmm_kernel_pd = (page_directory_entry*)pmm_alloc_frame();
+    vmm_current_pd = vmm_kernel_pd;
     memset(vmm_current_pd, 0, PAGE_SIZE);
 
     if(!vmm_current_pd) {
@@ -34,6 +37,7 @@ uint32 vmm_init() {
     // Locate where we're going to start our kernel heap, and allocate memory for it
     printk(LOG_DEBUG, "vmm_init(): Allocating initial memory for the heap allocator..\n");
     heap_start_vaddr = (void*)ALIGN_UP_4K((uint32)&KERNEL_VIRT_END);
+    heap_end_vaddr   = (void*)(heap_start_vaddr + HEAP_MAX_SIZE + sizeof(block_header) + sizeof(block_trailer));
     vmm_alloc_pages(heap_start_vaddr, HEAP_MAX_SIZE + sizeof(block_header) + sizeof(block_trailer));
     heap_init(heap_start_vaddr);
 
@@ -209,7 +213,7 @@ void heap_coalesce_free_block(block_header * free_block) {
 
 void * kmalloc(uint32 size) {
     if(size <= 0) {
-        return (void*)VMM_ERR_INVALID_SIZE;
+        return (void*)0;
     }
 
     // Round up to the closest multiple of 4
@@ -229,7 +233,7 @@ void * kmalloc(uint32 size) {
     // If we couldn't find an appropriate block, error out
     if(best_block == NULL) {
         printk(LOG_DEBUG, "kmalloc(): No suitable block found!\n");
-        return (void*)KMALLOC_FAIL;
+        return (void*)0;
     }
 
     // Case 1: Perfect Fit
@@ -268,13 +272,27 @@ void * kmalloc(uint32 size) {
         return (void*)new_block_addr + sizeof(block_header);
     }
 
-    return (void*)KMALLOC_FAIL;
+    return (void*)0;
 }
 
 /* ========================================================================= */
 
 int kfree(void * ptr) {
     printk(LOG_DEBUG, "kfree(): Freeing 0x%x\n", ptr);
+
+    if(ptr == NULL) {
+        printk(LOG_DEBUG, "kfree(): Invalid ptr of NULL received!\n");
+        return 0;
+    }
+
+    if(ptr < heap_start_vaddr || ptr > heap_end_vaddr) {
+        printk(LOG_DEBUG, "kfree(): Ptr (0x%x) is out of heap bounds (0x%x -> 0x%x)\n",
+                ptr,
+                heap_start_vaddr,
+                heap_end_vaddr);
+        return 0;
+    }
+
     block_header * to_free_block = (block_header*)ptr - 1;
     block_trailer * to_free_trailer = (block_trailer*)((char*)to_free_block + sizeof(block_header) + 
             to_free_block->size);
@@ -314,7 +332,7 @@ int kfree(void * ptr) {
         current_block = (block_header*)((char*)current_block + sizeof(block_header) + current_block->size + sizeof(block_trailer));
     }
 
-    return 0;
+    return 1;
 }
 
 /* ========================================================================= */

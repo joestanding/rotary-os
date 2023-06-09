@@ -45,6 +45,12 @@ typedef struct {
 
 /* ========================================================================= */
 
+extern void * heap_start_vaddr;
+extern void * heap_end_vaddr;
+extern page_directory_entry * vmm_kernel_pd;
+
+/* ========================================================================= */
+
 uint32  vmm_init();
 void    vmm_print();
 
