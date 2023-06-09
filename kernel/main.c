@@ -95,7 +95,7 @@ void kernel_main(uint32 mboot_magic, multiboot_info_t * mboot_info) {
     printk(LOG_DEBUG, "Kernel initialisation complete!\n");
     printk(LOG_DEBUG, "\n");
     
-    task_create("shell", TASK_KERNEL, &shell_init);
+    task_create("shell", TASK_KERNEL, &shell_init, TASK_STATE_WAITING);
     
     while(true) { }
 }
