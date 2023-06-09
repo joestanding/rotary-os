@@ -57,7 +57,8 @@ uint32 gdt_init() {
                                                                      GDT_ACCESS_WRITABLE);
 
     // Task State Segment
-    gdt_encode_entry(&tss_entry, (uint32)&tss_obj, sizeof(tss_obj), 0x40, 0x89);
+    tss * task_seg = tss_get();
+    gdt_encode_entry(&tss_entry, (uint32)task_seg, sizeof(tss), 0x40, 0x89);
 
     // Load the GDT descriptor
     asm volatile("lgdt %0" :: "m"(descriptor));
