@@ -16,7 +16,7 @@ QEMUX86		:= qemu-system-i386
 BOCHS		:= bochs
 ASM			:= nasm
 CINC		:= include
-CFLAGS		:= -O0 -Wall -Werror -m32 -mno-sse -fno-pie -ffreestanding -fno-stack-protector -nostdinc -fno-asynchronous-unwind-tables -I $(CINC)
+CFLAGS		:= -O0 -Wall -Werror -m32 -mno-sse -fno-pie -ffreestanding -fno-stack-protector -fno-asynchronous-unwind-tables -I $(CINC)
 
 # Directories
 BUILD_DIR			:= build
