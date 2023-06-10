@@ -21,7 +21,7 @@ uint32 pmm_init() {
     }
 
     uint32 pmm_max_frames = (pmm_memory_end - pmm_memory_start) / PMM_FRAME_SIZE;
-    printk(LOG_DEBUG, "Frames available in allocated physical memory region: %d\n", pmm_max_frames);
+    printk(LOG_TRACE, "Frames available in allocated physical memory region: %d\n", pmm_max_frames);
 
     return 1;
 }
@@ -32,7 +32,7 @@ void pmm_set_memory_range(uint32 start_addr, uint32 end_addr) {
     pmm_memory_start = start_addr;
     pmm_memory_end   = end_addr;
     pmm_frames_max   = (end_addr - start_addr) / PMM_FRAME_SIZE;
-    printk(LOG_DEBUG, "Avail. memory range set to 0x%x -> 0x%x, %d frames\n", start_addr, end_addr, pmm_frames_max);
+    printk(LOG_TRACE, "Avail. memory range set to 0x%x -> 0x%x, %d frames\n", start_addr, end_addr, pmm_frames_max);
 }
 
 /* ========================================================================= */
@@ -89,7 +89,7 @@ void * pmm_alloc_frame() {
     uint32 first_free_frame = pmm_get_first_free_frame();
     pmm_set_frame_used(first_free_frame);
     void * frame_phys_addr = (void*)pmm_memory_start + (first_free_frame * PMM_FRAME_SIZE);
-    //printk(LOG_DEBUG, "pmm_alloc_frame(): Allocating frame num %d at physaddr 0x%x\n", first_free_frame, frame_phys_addr);
+    printk(LOG_TRACE, "pmm_alloc_frame(): Allocating frame num %d at physaddr 0x%x\n", first_free_frame, frame_phys_addr);
     return frame_phys_addr;
 }
 
@@ -97,7 +97,7 @@ void * pmm_alloc_frame() {
 
 void pmm_dealloc_frame(void * frame_phys_addr) {
     uint32 frame_num = (uint32)(((uint32)frame_phys_addr - pmm_memory_start) / PMM_FRAME_SIZE);
-    //printk(LOG_DEBUG, "pmm_alloc_frame(): Deallocating frame num %d at physaddr 0x%x\n", frame_num, frame_phys_addr);
+    printk(LOG_TRACE, "pmm_alloc_frame(): Deallocating frame num %d at physaddr 0x%x\n", frame_num, frame_phys_addr);
     pmm_set_frame_free(frame_num);
 }
 
@@ -111,17 +111,17 @@ uint32 pmm_align_4k(uint32 address) {
 /* ========================================================================= */
 
 void pmm_print() {
-    printk(LOG_DEBUG, "Physical Memory Manager\n");
-    printk(LOG_DEBUG, "-----------------------\n");
-    printk(LOG_DEBUG, "Frame Size:      %d bytes\n", PMM_FRAME_SIZE);
-    printk(LOG_DEBUG, "Max Frames:      %d\n", pmm_frames_max);
-    printk(LOG_DEBUG, "Frames Used:     %d\n", pmm_frames_used);
-    printk(LOG_DEBUG, "Kernel Start:    0x%x\n", &KERNEL_PHYS_START);
-    printk(LOG_DEBUG, "Kernel End:      0x%x\n", &KERNEL_PHYS_END);
-    printk(LOG_DEBUG, "Mem. Used:       %d bytes\n", pmm_frames_used * PMM_FRAME_SIZE);
-    printk(LOG_DEBUG, "Mem. Start:      0x%x\n", pmm_memory_start);
-    printk(LOG_DEBUG, "Mem. End:        0x%x\n", pmm_memory_end);
-    printk(LOG_DEBUG, "Bitmap Addr:     0x%x\n", &pmm_memory_bitmap);
+    printk(LOG_INFO, "Physical Memory Manager\n");
+    printk(LOG_INFO, "-----------------------\n");
+    printk(LOG_INFO, "Frame Size:      %d bytes\n", PMM_FRAME_SIZE);
+    printk(LOG_INFO, "Max Frames:      %d\n", pmm_frames_max);
+    printk(LOG_INFO, "Frames Used:     %d\n", pmm_frames_used);
+    printk(LOG_INFO, "Kernel Start:    0x%x\n", &KERNEL_PHYS_START);
+    printk(LOG_INFO, "Kernel End:      0x%x\n", &KERNEL_PHYS_END);
+    printk(LOG_INFO, "Mem. Used:       %d bytes\n", pmm_frames_used * PMM_FRAME_SIZE);
+    printk(LOG_INFO, "Mem. Start:      0x%x\n", pmm_memory_start);
+    printk(LOG_INFO, "Mem. End:        0x%x\n", pmm_memory_end);
+    printk(LOG_INFO, "Bitmap Addr:     0x%x\n", &pmm_memory_bitmap);
 }
 
 /* ========================================================================= */
