@@ -73,6 +73,8 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
         // Create a new page directory for the task
         page_directory_entry * page_directory = (page_directory_entry*)pmm_alloc_frame();
         paging_init_directory(page_directory);
+        paging_map(page_directory, (void*)0x00000000, (void*)0x00000000, SIZE_1M * 4);
+        paging_map(page_directory, (void*)0xC0000000, (void*)0x00000000, SIZE_1M * 4);
         tasks[task_id].cr3 = (uint32)page_directory;
         printk(LOG_DEBUG, "task_create(): Task page directory allocated at 0x%x\n", page_directory);
     }
@@ -107,7 +109,7 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
 
     last_task_id++;
 
-    // Relinquish control of the taks structure
+    // Relinquish control of the task structure
     unlock(&task_lock);
 
     return &tasks[task_id];
@@ -254,8 +256,8 @@ void task_schedule() {
 /* ========================================================================= */
 
 void task_print() {
-    printk(LOG_DEBUG, "Task List\n");
-    printk(LOG_DEBUG, "-----------------------------\n");
+    printk(LOG_INFO, "Task List\n");
+    printk(LOG_INFO, "-----------------------------\n");
     for(uint32 i = 0; i < TASK_MAX; i++) {
         char state[16];
         memset(&state, 0x00, sizeof(state));
@@ -271,14 +273,14 @@ void task_print() {
         if(tasks[i].state == TASK_STATE_KILLED)
             sprintf(state, "%s", "KILLED");
         if(tasks[i].state != TASK_STATE_EMPTY) {
-            printk(LOG_DEBUG, "[%d] name:   %s   (%s)\n", i, tasks[i].name, state);
-            printk(LOG_DEBUG, "     k_ebp:  0x%x\n", tasks[i].kernel_ebp);
-            printk(LOG_DEBUG, "     stack:  %d\n", tasks[i].kernel_ebp - tasks[i].kernel_esp);
-            printk(LOG_DEBUG, "     cr3:    0x%x\n", tasks[i].cr3);
-            printk(LOG_DEBUG, "     ticks:  %d\n", tasks[i].ticks);
+            printk(LOG_INFO, "[%d] name:   %s   (%s)\n", i, tasks[i].name, state);
+            printk(LOG_INFO, "     k_ebp:  0x%x\n", tasks[i].kernel_ebp);
+            printk(LOG_INFO, "     stack:  %d\n", tasks[i].kernel_ebp - tasks[i].kernel_esp);
+            printk(LOG_INFO, "     cr3:    0x%x\n", tasks[i].cr3);
+            printk(LOG_INFO, "     ticks:  %d\n", tasks[i].ticks);
         }
     }
-    printk(LOG_DEBUG, "\n");
+    printk(LOG_INFO, "\n");
 }
 
 /* ========================================================================= */
