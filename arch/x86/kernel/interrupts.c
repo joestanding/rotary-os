@@ -81,10 +81,20 @@ void isr_handler(isr_registers * registers) {
         if(registers->int_num == 14)
             vga_printf("[isr] Interrupt 14: Page Fault");
 
+        task * current_task = task_get_current();
+
         vga_printf("[isr] Error Code: %d", registers->error_code);
+        vga_printf("Task:       %s", current_task->name);
+        vga_printf("Registers");
+        vga_printf("---------");
+        vga_printf("EAX:        0x%x | EBX:        0x%x", registers->eax, registers->ebx);
+        vga_printf("ECX:        0x%x | EDX:        0x%x", registers->ecx, registers->edx);
+        vga_printf("ESI:        0x%x | EDI:        0x%x", registers->esi, registers->edi);
+        vga_printf("EIP:        0x%x | ESP:        0x%x", registers->eip, registers->esp);
+        vga_printf("CS:         0x%x", registers->cs);
+        vga_printf("EFLAGS:     0x%x", registers->eflags);
 
         if(registers->int_num == INT_PAGE_FAULT) {
-            task * current_task = task_get_current();
             uint8 present = registers->error_code & 0x1;
             uint8 write = (registers->error_code >> 1) & 0x1;
             uint8 user = (registers->error_code >> 2) & 0x1;
@@ -96,15 +106,7 @@ void isr_handler(isr_registers * registers) {
             uint32 cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r" (cr2));
 
-
-            vga_printf("");
-            vga_printf("--- PAGE FAULT ---");
-            vga_printf("Task:       %s", current_task->name);
-            vga_printf("EIP:        0x%x", registers->eip);
-            vga_printf("CS:         0x%x", registers->cs);
-            vga_printf("EFLAGS:     0x%x", registers->eflags);
             vga_printf("Fault at:   0x%x", cr2);
-            vga_printf("");
 
             if(present == 1) {
                 vga_printf("The fault was caused by a page-level protection violation.");
