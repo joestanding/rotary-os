@@ -49,50 +49,50 @@ void isr_handler(isr_registers * registers) {
 
     // Print some debugging information for exceptions raised by the CPU
     if(registers->int_num >= 0 && registers->int_num < 32) {
-        vga_printf("[isr] ISR called! Code: %d", registers->int_num);    
+        printk(LOG_INFO, "[isr] ISR called! Code: %d\n", registers->int_num);    
         if(registers->int_num == 0)
-            vga_printf("[isr] Interrupt 0: Divide by Zero");
+            printk(LOG_INFO, "[isr] Interrupt 0: Divide by Zero\n");
         if(registers->int_num == 1)
-            vga_printf("[isr] Interrupt 1: Single Step");
+            printk(LOG_INFO, "[isr] Interrupt 1: Single Step\n");
         if(registers->int_num == 2)
-            vga_printf("[isr] Interrupt 2: Non-Maskable (NMI)");
+            printk(LOG_INFO, "[isr] Interrupt 2: Non-Maskable (NMI)\n");
         if(registers->int_num == 3)
-            vga_printf("[isr] Interrupt 3: Breakpoint");
+            printk(LOG_INFO, "[isr] Interrupt 3: Breakpoint\n");
         if(registers->int_num == 4)
-            vga_printf("[isr] Interrupt 4: Overflow Trap");
+            printk(LOG_INFO, "[isr] Interrupt 4: Overflow Trap\n");
         if(registers->int_num == 5)
-            vga_printf("[isr] Interrupt 5: Bound Range Exceeded");
+            printk(LOG_INFO, "[isr] Interrupt 5: Bound Range Exceeded\n");
         if(registers->int_num == 6)
-            vga_printf("[isr] Interrupt 6: Invalid Opcode");
+            printk(LOG_INFO, "[isr] Interrupt 6: Invalid Opcode\n");
         if(registers->int_num == 7)
-            vga_printf("[isr] Interrupt 7: Coprocessor Not Available");
+            printk(LOG_INFO, "[isr] Interrupt 7: Coprocessor Not Available\n");
         if(registers->int_num == 8)
-            vga_printf("[isr] Interrupt 8: Double Fault Exception");
+            printk(LOG_INFO, "[isr] Interrupt 8: Double Fault Exception\n");
         if(registers->int_num == 9)
-            vga_printf("[isr] Interrupt 9: Coprocessor Segment Overrun");
+            printk(LOG_INFO, "[isr] Interrupt 9: Coprocessor Segment Overrun\n");
         if(registers->int_num == 10)
-            vga_printf("[isr] Interrupt 10: Invalid Task State Segment (TSS)");
+            printk(LOG_INFO, "[isr] Interrupt 10: Invalid Task State Segment (TSS)\n");
         if(registers->int_num == 11)
-            vga_printf("[isr] Interrupt 11: Segment Not Present");
+            printk(LOG_INFO, "[isr] Interrupt 11: Segment Not Present\n");
         if(registers->int_num == 12)
-            vga_printf("[isr] Interrupt 12: Stack Exception");
+            printk(LOG_INFO, "[isr] Interrupt 12: Stack Exception\n");
         if(registers->int_num == 13)
-            vga_printf("[isr] Interrupt 13: General Protection Exception");
+            printk(LOG_INFO, "[isr] Interrupt 13: General Protection Exception\n");
         if(registers->int_num == 14)
-            vga_printf("[isr] Interrupt 14: Page Fault");
+            printk(LOG_INFO, "[isr] Interrupt 14: Page Fault\n");
 
         task * current_task = task_get_current();
 
-        vga_printf("[isr] Error Code: %d", registers->error_code);
-        vga_printf("Task:       %s", current_task->name);
-        vga_printf("Registers");
-        vga_printf("---------");
-        vga_printf("EAX:        0x%x | EBX:        0x%x", registers->eax, registers->ebx);
-        vga_printf("ECX:        0x%x | EDX:        0x%x", registers->ecx, registers->edx);
-        vga_printf("ESI:        0x%x | EDI:        0x%x", registers->esi, registers->edi);
-        vga_printf("EIP:        0x%x | ESP:        0x%x", registers->eip, registers->esp);
-        vga_printf("CS:         0x%x", registers->cs);
-        vga_printf("EFLAGS:     0x%x", registers->eflags);
+        printk(LOG_INFO, "[isr] Error Code: %d\n", registers->error_code);
+        printk(LOG_INFO, "Task:       %s\n", current_task->name);
+        printk(LOG_INFO, "Registers\n");
+        printk(LOG_INFO, "---------\n");
+        printk(LOG_INFO, "EAX:        0x%x | EBX:        0x%x\n", registers->eax, registers->ebx);
+        printk(LOG_INFO, "ECX:        0x%x | EDX:        0x%x\n", registers->ecx, registers->edx);
+        printk(LOG_INFO, "ESI:        0x%x | EDI:        0x%x\n", registers->esi, registers->edi);
+        printk(LOG_INFO, "EIP:        0x%x | ESP:        0x%x\n", registers->eip, registers->esp);
+        printk(LOG_INFO, "CS:         0x%x\n", registers->cs);
+        printk(LOG_INFO, "EFLAGS:     0x%x\n", registers->eflags);
 
         if(registers->int_num == INT_PAGE_FAULT) {
             uint8 present = registers->error_code & 0x1;
@@ -106,34 +106,34 @@ void isr_handler(isr_registers * registers) {
             uint32 cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r" (cr2));
 
-            vga_printf("Fault at:   0x%x", cr2);
+            printk(LOG_INFO, "Fault at:   0x%x\n", cr2);
 
             if(present == 1) {
-                vga_printf("The fault was caused by a page-level protection violation.");
+                printk(LOG_INFO, "The fault was caused by a page-level protection violation.\n");
             } else {
-                vga_printf("The fault was caused by a non-present page.");
+                printk(LOG_INFO, "The fault was caused by a non-present page.\n");
             }
             if(write) {
-                vga_printf("The access causing the fault was a write.");
+                printk(LOG_INFO, "The access causing the fault was a write.\n");
             } else {
-                vga_printf("The access causing the fault was a read.");
+                printk(LOG_INFO, "The access causing the fault was a read.\n");
             }
             if(user) {
-                vga_printf("A user-mode access caused the fault.");
+                printk(LOG_INFO, "A user-mode access caused the fault.\n");
             } else {
-                vga_printf("A supervisor-mode access caused the fault.");
+                printk(LOG_INFO, "A supervisor-mode access caused the fault.\n");
             }
             if(rsvd_write) {
-                vga_printf("The fault was caused by a reserved bit set to 1 in some page entry.");
+                printk(LOG_INFO, "The fault was caused by a reserved bit set to 1 in some page entry.\n");
             }
             if(ins_fetch) {
-                vga_printf("The fault was caused by an instruction fetch.");
+                printk(LOG_INFO, "The fault was caused by an instruction fetch.\n");
             }
             if(pkey) {
-                vga_printf("There was a protection-key violation.");
+                printk(LOG_INFO, "There was a protection-key violation.\n");
             }
             if(shadow_stack) {
-                vga_printf("The fault was caused by a shadow-stack access.");
+                printk(LOG_INFO, "The fault was caused by a shadow-stack access.\n");
             }
         }
 
