@@ -33,11 +33,18 @@ void _printk(uint8 level, char * tag, char * message) {
     // Take exclusive control of printing to video output and serial
     lock(&print_lock);
 
-    // Write this message to the screen
-    vga_printf(vga_message);
+    if(level >= LOG_INFO) {
+        // Write this message to the screen
+        vga_printf(vga_message);
 
-    // Write this to the serial output
-    serial_write_line(final_message);
+        // Write this to the serial output
+        serial_write_line(IO_PORT_SERIAL_COM1, final_message);
+    }
+
+    if(level <= LOG_DEBUG) {
+        // Write this to the serial output
+        serial_write_line(IO_PORT_SERIAL_COM2, final_message);
+    }
 
     // Release control so others can print
     unlock(&print_lock);

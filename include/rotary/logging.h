@@ -10,7 +10,9 @@
 
 /* ========================================================================= */
 
-#define LOG_DEBUG 0
+#define LOG_TRACE 0
+#define LOG_DEBUG 1
+#define LOG_INFO  2
 
 #define printk(log_level, fmt_str, ...) \
     { \
