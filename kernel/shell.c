@@ -4,14 +4,14 @@ char shell_prompt[] = "shell> ";
 char input_buffer[256] = "\0";
 void * command_handlers[256];
 
-extern uint32 heap_start_vaddr;
+extern void * heap_start_vaddr;
 
 /* ========================================================================= */
 /*  Initialisation                                                           */
 /* ========================================================================= */
 
 void shell_init() {
-    vga_scroll_up(1, 4);
+    vga_scroll_up(1, TOP_LINE);
     driver_keyboard_register_handler((uint32)&shell_keyboard_handler);
     shell_print_prompt();
     while(true) { }
@@ -46,9 +46,10 @@ void shell_clear_input_buffer() {
 void shell_keyboard_handler(uchar key) {
     // If the key is Enter, submit the command and scroll existing lines up
     if(key == KEY_ENTER) {
+        vga_scroll_up(1, TOP_LINE);
+        vga_state.cursor_x = 0;
         shell_process_command(input_buffer);
         shell_clear_input_buffer();
-        vga_scroll_up(1, 4);
         shell_print_prompt();
         return;
     }
@@ -71,7 +72,32 @@ void shell_keyboard_handler(uchar key) {
 /*  Command Handling                                                         */
 /* ========================================================================= */
 
+extern uint32 t1_counter;
+
+void banana() {
+    //task_exit_current();
+    printk(LOG_DEBUG, "BANANA initialised\n");
+    while(true) { }
+}
+
 void shell_process_command(char * command) {
+
+    if(strcmp(command, "tss") != 0) {
+        tss_set_esp0((void*)0xDEADBEEF);
+        tss_set_ss0(0x10);
+        //tss_flush();
+        return;
+    }
+
+    if(strcmp(command, "banana") != 0) {
+        task_create("banana", TASK_USERMODE, &banana, TASK_STATE_WAITING);
+        return;
+    }
+
+    if(strcmp(command, "testkill") != 0) {
+        task_kill(2);
+        return;
+    }
 
     //TODO: temp, replace with command handlers in separate files
     if(strcmp(command, "gdt") != 0) {
@@ -159,7 +185,7 @@ void shell_process_command(char * command) {
         block_header * block = (block_header*)heap_start_vaddr;
         while(block->size != 0) {
             uint32 trailer_addr = (uint32)block + sizeof(block_header) + block->size;
-            vga_printf("addr %x sz %d us %d pr %x nx %x tr %x", block, block->size, block->used,
+            printk(LOG_INFO, "addr %x sz %d us %d pr %x nx %x tr %x\n", block, block->size, block->used,
                     block->prev_free_block, block->next_free_block, trailer_addr);
             block = (block_header*)((char*)block + sizeof(block_header) + block->size + sizeof(block_trailer));
 

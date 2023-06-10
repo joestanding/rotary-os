@@ -9,6 +9,8 @@
 #include <rotary/task.h>
 #include <rotary/vmm.h>
 #include <rotary/pmm.h>
+#include <rotary/paging.h>
+#include <rotary/tss.h>
 
 /* ========================================================================= */
 
