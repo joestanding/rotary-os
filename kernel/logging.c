@@ -19,16 +19,8 @@ void _printk(uint8 level, char * tag, char * message) {
     sprintf(final_message, "[0.000][%s] %s", tag, message);
 
     // Format our message for VGA output
-    char * vga_ptr = vga_message;
+    //char * vga_ptr = vga_message;
     strncpy(vga_message, message, strlen(message) + 1);
-
-    // Replace any newline characters with null terminators for now
-    while(*vga_ptr != '\0') {
-        if(*vga_ptr == '\n') {
-            *vga_ptr = '\0';
-        }
-        vga_ptr++;
-    }
 
     // Take exclusive control of printing to video output and serial
     lock(&print_lock);
