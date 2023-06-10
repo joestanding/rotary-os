@@ -80,6 +80,14 @@ void int_to_hex_str(uint32 num, char * dest) {
 
 /* ========================================================================= */
 
+void fill_buffer(char* dest_buf, uint32* dest_index, char c, int count) {
+    for (int i = 0; i < count; i++) {
+        dest_buf[(*dest_index)++] = c;
+    }
+}
+
+/* ========================================================================= */
+
 void sprintf(char *dest_buf, char *format_str, ...) {
     __builtin_va_list list;
     __builtin_va_start(list, format_str);
@@ -99,10 +107,26 @@ void sprintf(char *dest_buf, char *format_str, ...) {
                 dest_buf[dest_index++] = format_str[processed++];
             }
 
-            switch (format_str[index + 1]) {
+            index++; // move past '%'
+
+            // Padding
+            int padding = 0;
+            while(format_str[index] >= '0' && format_str[index] <= '9') {
+                padding = padding * 10 + (format_str[index] - '0');
+                index++;
+            }
+
+            int length = 0;
+
+            switch (format_str[index]) {
                 case 's':
                     {
                         char *str_arg = __builtin_va_arg(list, char*);
+                        // Padding
+                        length = strlen(str_arg);
+                        if (padding > length) {
+                            fill_buffer(dest_buf, &dest_index, '0', padding - length);
+                        }
                         // Concatenate the string argument
                         while (*str_arg != '\0') {
                             dest_buf[dest_index++] = *str_arg++;
@@ -111,6 +135,11 @@ void sprintf(char *dest_buf, char *format_str, ...) {
                     break;
                 case 'd':
                     int_to_str(__builtin_va_arg(list, int), (char*)&num);
+                    // Padding
+                    length = strlen(num);
+                    if (padding > length) {
+                        fill_buffer(dest_buf, &dest_index, '0', padding - length);
+                    }
                     // Concatenate the decimal number
                     char *num_ptr = num;
                     while (*num_ptr != '\0') {
@@ -119,6 +148,11 @@ void sprintf(char *dest_buf, char *format_str, ...) {
                     break;
                 case 'x':
                     int_to_hex_str(__builtin_va_arg(list, int), num);
+                    // Padding
+                    length = strlen(num);
+                    if (padding > length) {
+                        fill_buffer(dest_buf, &dest_index, '0', padding - length);
+                    }
                     // Concatenate the hexadecimal number
                     char *hex_ptr = num;
                     while (*hex_ptr != '\0') {
@@ -127,7 +161,7 @@ void sprintf(char *dest_buf, char *format_str, ...) {
                     break;
             }
 
-            processed = index + 2; // 2 for the % and the format character
+            processed = index + 1; // index is already moved past the format character
         }
         index++;
     }
