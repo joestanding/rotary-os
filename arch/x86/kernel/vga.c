@@ -4,11 +4,16 @@
 /* Stuff                                                                     */
 /* ========================================================================= */
 
-struct s_vga_state {
-    uint32 cursor_x;
-    uint32 cursor_y;
-    uint8  enabled;
-} vga_state = {0, 3, 1};
+uint32 current_fg_colour = VGA_COLOUR_WHITE;
+
+vga_state_t vga_state = {0, 3, 1};
+
+void vga_write(char * string) {
+    int string_len = strlen(string);
+    for(uint32 i = 0; i < string_len; i++) {
+        vga_print_char_at_cursor(string[i]);
+    }
+}
 
 void vga_set_cursor(uint32 x, uint32 y) {
     vga_state.cursor_x = x;
@@ -24,15 +29,37 @@ void vga_set_cursor(uint32 x, uint32 y) {
 // ------------------------------------------------------------------------- //
 
 void vga_print_char_at_cursor(uchar tchar) {
-    vga_set_character(tchar, VGA_COLOUR_WHITE, VGA_COLOUR_BLACK, vga_state.cursor_x, vga_state.cursor_y);
-    uint16 new_x = vga_state.cursor_x + 1;
-    uint16 new_y = vga_state.cursor_y;
+    if(tchar == '\n') {
+        vga_state.cursor_x = 0; 
+        //vga_state.cursor_y++;
+        vga_scroll_up(1, TOP_LINE);
+        return;
+    }
+
+    // Yes, I know these escape characters are an awful way to do this
+    if(tchar == '\f') {
+        current_fg_colour = VGA_COLOUR_GREEN;    
+        return;
+    }
+
+    if(tchar == '\r') {
+        current_fg_colour = VGA_COLOUR_RED;    
+        return;
+    }
+
+    if(tchar == '\v') {
+        current_fg_colour = VGA_COLOUR_WHITE;    
+        return;
+    }
 
     if(vga_state.cursor_x == VGA_WIDTH) {
-        vga_state.cursor_x = 0;
-        new_y = vga_state.cursor_y + 1;
+        vga_state.cursor_x = 0; 
+        vga_scroll_up(1, TOP_LINE);
+        //vga_state.cursor_y++;
     }
-    vga_set_cursor(new_x, new_y);
+
+    vga_set_character(tchar, current_fg_colour, VGA_COLOUR_BLACK, vga_state.cursor_x, vga_state.cursor_y);
+    vga_state.cursor_x++;
 }
 
 void vga_print_string_at_cursor(char * string) {
@@ -53,7 +80,7 @@ void vga_delete_char_at_cursor() {
 // ------------------------------------------------------------------------- //
 
 void vga_print_line(char * string) {
-    vga_scroll_up(1, 4);
+    vga_scroll_up(1, TOP_LINE);
     vga_overwrite_line(string, VGA_COLOUR_WHITE, VGA_COLOUR_BLACK, 24);
 }
 
@@ -66,9 +93,16 @@ void vga_scroll_up(int line_count, int top_line) {
             for(uint32 x = 0; x < VGA_WIDTH; x++) {
                 uint32 addr = VGA_BUFFER + (line * 160 + (x*2));
                 uchar character = *(uchar*)addr;
-                //TODO: Pull existing colour attributes
-                vga_set_character(character, VGA_COLOUR_WHITE, VGA_COLOUR_BLACK, x, line-1);
+                // Get colour byte from the buffer
+                char colour = *((uchar*)addr + 1); 
+                // The higher 4 bits of the colour byte are for the background
+                uchar bg_colour = colour >> 4; 
+                // The lower 4 bits of the colour byte are for the foreground
+                uchar fg_colour = colour & 0x0F; 
+                vga_set_character(character, fg_colour, bg_colour, x, line-1);
             }
+
+            vga_clear_line(line);
         }
     }
 }
@@ -93,16 +127,12 @@ void vga_clear_screen(uint32 colour) {
 
 // ------------------------------------------------------------------------- //
 
-void vga_overwrite_line(
-        char * string,
-        uchar fg_colour,
-        uchar bg_colour,
-        int y) {
+void vga_overwrite_line(char * string, uchar fg_colour, uchar bg_colour, int y) {
+    vga_clear_line(y);
     int string_len = strlen(string);
-    for(uint32 i = 0; i < VGA_WIDTH; i++)
-        vga_set_character(' ', VGA_COLOUR_BLACK, VGA_COLOUR_BLACK, i, y);
-    for(uint32 i = 0; i < string_len; i++)
+    for(uint32 i = 0; i < string_len; i++) {
         vga_set_character(string[i], fg_colour, bg_colour, i, y);
+    }
 }
 
 // ------------------------------------------------------------------------- //
