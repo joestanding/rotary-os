@@ -21,3 +21,6 @@
 #undef  LOG_TAG
 #define LOG_TAG "init"
 
+#define OK_STR "[ \fOK\v ]\n"
+#define FAIL_STR "[\rFAIL\v]\n"
+
