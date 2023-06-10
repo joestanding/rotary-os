@@ -114,7 +114,9 @@
 
 /* ========================================================================= */
 
-void serial_init();
-void serial_write_line(char * line);
+uint32 serial_init();
+uint32 serial_init_port(uint32 port);
+uint32 serial_is_transmit_empty(uint32 port);
+uint32 serial_write_line(uint32 port, char * line);
 
 /* ========================================================================= */
