@@ -8,9 +8,7 @@
 ; identity map our kernel (loaded at 0x00100000), and map it to 0xC0000000. Identity mapping this
 ; will ensure our boot code is still addressable once we enable paging.
 ;
-; Finally, once paging has been enabled and the page tables have been assigned, we'll jump to
-; the kernel entry.
-
+; Finally, once paging has been enabled and the page tables have been assigned, we'll jump to the kernel entry.
 MAGIC               equ 0x1BADB002
 FLAG_ALIGN          equ 1 << 0
 FLAG_MEMINFO        equ 1 << 1
@@ -88,11 +86,9 @@ _start:
     or      eax, 0x80000000
     mov     cr0, eax
 
+    ; Update our stack pointer to be within the higher half
+    add     esp, 0xC0000000
+
     ; Jump to our kernel
     call kernel_main
     jmp $
-
-
-
-
-
