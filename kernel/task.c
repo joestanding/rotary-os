@@ -73,8 +73,8 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
         // Create a new page directory for the task
         page_directory_entry * page_directory = (page_directory_entry*)pmm_alloc_frame();
         paging_init_directory(page_directory);
-        paging_map(page_directory, (void*)0x00000000, (void*)0x00000000, SIZE_1M * 4);
-        paging_map(page_directory, (void*)0xC0000000, (void*)0x00000000, SIZE_1M * 4);
+        paging_map(page_directory, (void*)0x00000000, (void*)0x00000000, SIZE_1G);
+        paging_map(page_directory, (void*)0xC0000000, (void*)0x00000000, SIZE_1G);
         tasks[task_id].cr3 = (uint32)page_directory;
         printk(LOG_DEBUG, "task_create(): Task page directory allocated at 0x%x\n", page_directory);
     }
@@ -87,6 +87,7 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
     // a call to isr_exit(), which will restore the following registers just like the end
     // of any other ISR. As a result, the EIP is where our task will start.
     tasks[task_id].kernel_esp -= sizeof(isr_registers);
+    printk(LOG_TRACE, "task_create(): isr_registers struct is at 0x%x\n", tasks[task_id].kernel_esp);
     isr_registers * registers = (isr_registers*)tasks[task_id].kernel_esp;
     memset(registers, 0, sizeof(isr_registers));
     registers->eflags = 0x200;
@@ -96,6 +97,7 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
     // This struct stores registers that are saved and restored by task_switch()
     // EDI->EBP are restored via pops, EIP is restored by ret
     tasks[task_id].kernel_esp -= sizeof(task_context);
+    printk(LOG_TRACE, "task_create(): context struct is at 0x%x\n", tasks[task_id].kernel_esp);
     task_context * context = (task_context*)tasks[task_id].kernel_esp;
     memset(context, 0, sizeof(task_context));
     context->edi = 0;
@@ -111,6 +113,10 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
 
     // Relinquish control of the task structure
     unlock(&task_lock);
+
+    printk(LOG_TRACE, "task_create(): Created task '%s' (PID: %d) with attributes:\n", tasks[task_id].name, task_id);
+    printk(LOG_TRACE, "               EIP:  0x%x\n", registers->eip);
+    printk(LOG_TRACE, "               ESP:  0x%x\n", tasks[task_id].kernel_esp);
 
     return &tasks[task_id];
 }
@@ -273,11 +279,12 @@ void task_print() {
         if(tasks[i].state == TASK_STATE_KILLED)
             sprintf(state, "%s", "KILLED");
         if(tasks[i].state != TASK_STATE_EMPTY) {
-            printk(LOG_INFO, "[%d] name:   %s   (%s)\n", i, tasks[i].name, state);
-            printk(LOG_INFO, "     k_ebp:  0x%x\n", tasks[i].kernel_ebp);
-            printk(LOG_INFO, "     stack:  %d\n", tasks[i].kernel_ebp - tasks[i].kernel_esp);
-            printk(LOG_INFO, "     cr3:    0x%x\n", tasks[i].cr3);
-            printk(LOG_INFO, "     ticks:  %d\n", tasks[i].ticks);
+            printk(LOG_INFO, "[%d]   name:   %s   (%s)\n", i, tasks[i].name, state);
+            printk(LOG_INFO, "      k_esp:  0x%x\n", tasks[i].kernel_esp);
+            printk(LOG_INFO, "      k_ebp:  0x%x\n", tasks[i].kernel_ebp);
+            printk(LOG_INFO, "      stack:  %d\n", tasks[i].kernel_ebp - tasks[i].kernel_esp);
+            printk(LOG_INFO, "      cr3:    0x%x\n", tasks[i].cr3);
+            printk(LOG_INFO, "      ticks:  %d\n", tasks[i].ticks);
         }
     }
     printk(LOG_INFO, "\n");
