@@ -29,6 +29,9 @@
 #define PAGE_KERNEL_ONLY     0
 #define PAGE_USER_AND_KERNEL 1
 
+#define PAGE_SIZE_4K 0
+#define PAGE_SIZE_4M 1
+
 #define PAGE_DIRECTORY_INDEX(x) (((uint32)(x) >> 22) & 0x3FF)
 #define PAGE_TABLE_INDEX(x) (((uint32)(x) >> 12) & 0x3FF)
 

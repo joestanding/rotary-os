@@ -48,13 +48,17 @@ uint32 paging_init_table(page_table_entry * page_table) {
 /* ========================================================================= */
 
 uint32 paging_map(page_directory_entry * page_directory, void * virtual_addr, void * physical_addr, uint32 size) {
+    printk(LOG_TRACE, "paging_map(pd: 0x%x, vaddr: 0x%x, paddr: 0x%x, sz: %d)\n", page_directory,
+            virtual_addr,
+            physical_addr,
+            size);
     if(!IS_4K_ALIGNED(size)) {
         printk(LOG_DEBUG, "paging_map(): Size (%d) is not 4K aligned!\n", size);
         return -1;
     }
 
     //TODO: handle different page sizes
-    uint32 mapping_count = ALIGN_UP_4K(size) / 4096;
+    uint32 mapping_count = ALIGN_UP_4K(size) / SIZE_4K;
     uint32 working_virt_addr = (uint32)virtual_addr;
     uint32 working_phys_addr = (uint32)physical_addr;
 
