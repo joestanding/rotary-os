@@ -3,6 +3,7 @@
 /* ========================================================================= */
 #pragma once
 
+#include <rotary/options.h>
 #include <rotary/types.h>
 #include <rotary/logging.h>
 #include <rotary/debug.h>
