@@ -27,12 +27,34 @@ uint32 vmm_init() {
     paging_init_directory(vmm_current_pd);
     
     // Identity map lowest 4MB
-    paging_map(vmm_current_pd, (void*)0x00000000, (void*)0x00000000, SIZE_1M * 4);
+    paging_map(vmm_current_pd, (void*)0x00000000, (void*)0x00000000, SIZE_1M * 16);
     // Map lowest 4MB into 3GB+ for higher-half kernel
-    paging_map(vmm_current_pd, (void*)0xC0000000, (void*)0x00000000, SIZE_1M * 4);
+    //paging_map(vmm_current_pd, (void*)KERNEL_BASE, (void*)0x00000000, SIZE_1M * 16);
+   
+    //uint32 current_addr = 0;
+
+    vmm_kernel_pd[768].present   = PAGE_PRESENT;
+    vmm_kernel_pd[768].writable  = PAGE_WRITABLE;
+    vmm_kernel_pd[768].user      = PAGE_KERNEL_ONLY;
+    vmm_kernel_pd[768].page_size = PAGE_SIZE_4M;
+
+    /*
+    for(uint32 i = 768; i < 769; i++) {
+        printk(LOG_TRACE, "vmm_init(): Mapping PD index %d to phys. 0x%x\n", i, current_addr);
+        vmm_kernel_pd[i].present   = PAGE_PRESENT;
+        vmm_kernel_pd[i].writable  = PAGE_WRITABLE;
+        vmm_kernel_pd[i].user      = PAGE_KERNEL_ONLY;
+        vmm_kernel_pd[i].page_size = PAGE_SIZE_4M;
+        vmm_kernel_pd[i].address   = current_addr >> 12;
+        current_addr += SIZE_4M;
+    }
+    */
 
     // Load the paging directory into CR3 and begin using it
+    printk(LOG_DEBUG, "vmm_init(): Loading newly created page directory..\n");
+    printk(LOG_DEBUG, "vmm_init(): Kernel mappings begin at 0x%x\n", &vmm_kernel_pd[768]);
     paging_load_directory(vmm_current_pd);
+    debug_break();
 
     // Locate where we're going to start our kernel heap, and allocate memory for it
     printk(LOG_DEBUG, "vmm_init(): Allocating initial memory for the heap allocator..\n");
