@@ -52,6 +52,7 @@ void    heap_create_new_block(void * addr, uint32 size, uint32 used, void * prev
 void    heap_coalesce_free_block(block_header * free_block);
 void    heap_insert_free_block(block_header * header);
 void    heap_remove_free_block(block_header * header);
+void    heap_print();
 
 void *  kmalloc(uint32 size);
 int     kfree(void * ptr);

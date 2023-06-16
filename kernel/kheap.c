@@ -258,3 +258,18 @@ int kfree(void * ptr) {
 }
 
 /* ========================================================================= */
+
+void heap_print() {
+    printk(LOG_INFO, "Kernel Heap\n");
+    printk(LOG_INFO, "-----------\n");
+    block_header * block = (block_header*)heap_start_vaddr;
+    while(block->size != 0) {
+        uint32 trailer_addr = (uint32)block + sizeof(block_header) + block->size;
+        printk(LOG_INFO, "addr %x sz %d us %d pr %x nx %x tr %x\n", block, block->size, block->used,
+                block->prev_free_block, block->next_free_block, trailer_addr);
+        block = (block_header*)((char*)block + sizeof(block_header) + block->size + sizeof(block_trailer));
+
+    }
+}
+
+/* ========================================================================= */
