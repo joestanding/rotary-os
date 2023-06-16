@@ -17,6 +17,7 @@
 #include <rotary/paging.h>
 #include <rotary/pmm.h>
 #include <rotary/test.h>
+#include <rotary/cpuid.h>
 
 #undef  LOG_TAG
 #define LOG_TAG "init"

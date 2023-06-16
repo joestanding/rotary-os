@@ -5,6 +5,7 @@
 
 #include <rotary/types.h>
 #include <rotary/vmm.h>
+#include <rotary/kheap.h>
 #include <rotary/logging.h>
 #include <rotary/test.h>
 
