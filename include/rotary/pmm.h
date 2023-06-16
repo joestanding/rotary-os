@@ -20,6 +20,12 @@
 #define PMM_MEMTYPE_RESERVED    0
 #define PMM_MEMTYPE_AVAILABLE   1
 
+#define VIR_TO_PHY(addr) ((uint32)addr - KERNEL_BASE)
+#define PHY_TO_VIR(addr) ((uint32)addr + KERNEL_BASE)
+
+/* ========================================================================= */
+
+
 /* ========================================================================= */
 
 uint32 pmm_init();
