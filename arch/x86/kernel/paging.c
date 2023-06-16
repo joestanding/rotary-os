@@ -7,6 +7,7 @@ uint32 paging_load_directory(page_directory_entry * page_directory) {
         printk(LOG_DEBUG, "paging_load_directory(): PD is not page aligned!\n");
         return -1;
     }
+    printk(LOG_DEBUG, "paging_load_directory(): Loading page directory at 0x%x\n", page_directory);
     asm volatile("mov %0, %%cr3" :: "r"((uint32)page_directory) : "memory");
     return 0;
 }

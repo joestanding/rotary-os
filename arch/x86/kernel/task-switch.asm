@@ -50,13 +50,13 @@ task_switch:
     ; Loading Next Task State
     ; --------------------------------------------------------------;
 
-    ; Load the tasks's CR3
-    mov     ebx, [edx + TASK_OFFSET_CR3]
-    mov     cr3, ebx
-
     ; Now we need to load the stack pointer of the next task
     mov     esp, [edx + TASK_OFFSET_KERNEL_ESP]
 
+    ; Load the tasks's CR3
+    mov     ebx, [edx + TASK_OFFSET_CR3]
+    mov     cr3, ebx
+    
     ; Restore registers that aren't preserved by cdecl
     pop     edi
     pop     esi
