@@ -53,6 +53,7 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
     strncpy(tasks[task_id].name, name, 16);
 
     // Allocate memory from the kernel heap
+    printk(LOG_TRACE, "task_create(): Allocating kernel stack with kmalloc\n");
     void * kernel_stack = kmalloc(TASK_STACK_SIZE);
     if((uint32)kernel_stack == KMALLOC_FAIL) {
         printk(LOG_DEBUG, "task_create(): Failed to allocate memory for the kernel stack!\n");
@@ -67,15 +68,15 @@ task * task_create(char * name, uint32 type, void * start_addr, uint32 state) {
 
     if(type == TASK_KERNEL) {
         printk(LOG_DEBUG, "task_create(): Task is a kernel task, assigning kernel PDE\n");
-        tasks[task_id].cr3 = (uint32)vmm_kernel_pd;
+        tasks[task_id].cr3 = (uint32)VIR_TO_PHY(vmm_kernel_pd);
     } else {
         printk(LOG_DEBUG, "task_create(): Task is a user task, creating new PDE\n");
         // Create a new page directory for the task
-        page_directory_entry * page_directory = (page_directory_entry*)pmm_alloc_frame();
+        page_directory_entry * page_directory = (page_directory_entry*)PHY_TO_VIR(pmm_alloc_frame());
         paging_init_directory(page_directory);
-        paging_map(page_directory, (void*)0x00000000, (void*)0x00000000, SIZE_1G);
-        paging_map(page_directory, (void*)0xC0000000, (void*)0x00000000, SIZE_1G);
-        tasks[task_id].cr3 = (uint32)page_directory;
+        // Set up some initial mappings including mapping the kernel in
+        vmm_map_kernel(page_directory);
+        tasks[task_id].cr3 = (uint32)VIR_TO_PHY(page_directory);
         printk(LOG_DEBUG, "task_create(): Task page directory allocated at 0x%x\n", page_directory);
     }
 

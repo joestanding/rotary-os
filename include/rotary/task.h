@@ -9,6 +9,7 @@
 #include <rotary/vga.h>
 #include <rotary/paging.h>
 #include <rotary/vmm.h>
+#include <rotary/kheap.h>
 #include <rotary/sync.h>
 
 /* ========================================================================= */
