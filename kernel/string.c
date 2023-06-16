@@ -38,33 +38,6 @@ void int_to_str(uint32 num, char * dest)
     }
 }
 
-/*
-void int_to_str(uint64 value, char *buf, uint8 base) {
-    static const char *digits = "0123456789ABCDEF";
-    char *p = buf;
-    uint64 tmp = value;
-
-    do {
-        *p++ = digits[tmp % base];
-        tmp /= base;
-    } while (tmp != 0);
-
-    *p-- = '\0';
-
-    // Reverse the string
-    char *start = buf;
-    char tmp_char;
-
-    while (start < p) {
-        tmp_char = *start;
-        *start = *p;
-        *p = tmp_char;
-        start++;
-        p--;
-    }
-}
-*/
-
 /* ========================================================================= */
 
 void int_to_hex_str(uint32 num, char * dest) {
@@ -158,6 +131,14 @@ void sprintf(char *dest_buf, char *format_str, ...) {
                     while (*hex_ptr != '\0') {
                         dest_buf[dest_index++] = *hex_ptr++;
                     }
+                    break;
+                case 'c':
+                    // Padding
+                    if (padding > 1) {
+                        fill_buffer(dest_buf, &dest_index, '0', padding - 1);
+                    }
+                    // Concatenate the character
+                    dest_buf[dest_index++] = __builtin_va_arg(list, int);
                     break;
             }
 
