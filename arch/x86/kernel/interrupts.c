@@ -81,10 +81,10 @@ void isr_handler(isr_registers * registers) {
         if(registers->int_num == 14)
             printk(LOG_INFO, "[isr] Interrupt 14: Page Fault\n");
 
-        task * current_task = task_get_current();
+        //task * current_task = task_get_current();
 
         printk(LOG_INFO, "[isr] Error Code: %d\n", registers->error_code);
-        printk(LOG_INFO, "Task:       %s\n", current_task->name);
+        //printk(LOG_INFO, "Task:       %s\n", current_task->name);
         printk(LOG_INFO, "Registers\n");
         printk(LOG_INFO, "---------\n");
         printk(LOG_INFO, "EAX:        0x%x | EBX:        0x%x\n", registers->eax, registers->ebx);
