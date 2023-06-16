@@ -38,6 +38,13 @@ void kernel_main(uint32 mboot_magic, multiboot_info_t * mboot_info) {
     }
     printk(LOG_INFO, OK_STR);
 
+    printk(LOG_INFO, "Retrieving CPUID..                     ");
+    if(!cpuid_init()) {
+        printk(LOG_INFO, FAIL_STR);
+        return;
+    }
+    printk(LOG_INFO, OK_STR);
+
     printk(LOG_INFO, "Setting up GDT..                       ");
     if(!gdt_init()) {
         printk(LOG_INFO, FAIL_STR);
@@ -101,6 +108,9 @@ void kernel_main(uint32 mboot_magic, multiboot_info_t * mboot_info) {
     }
     printk(LOG_INFO, OK_STR);
 
+
+    /*
+     * TODO: Replace this with some flags set earlier by multiboot parse
     if(mboot_info->flags & MULTIBOOT_INFO_CMDLINE) {
         if(strcmp((char*)mboot_info->cmdline, "test") != 0) {
             printk(LOG_INFO, "\n--- STARTING TESTS ---\n");
@@ -108,6 +118,7 @@ void kernel_main(uint32 mboot_magic, multiboot_info_t * mboot_info) {
             debug_break();
         }
     }
+    */
 
     printk(LOG_INFO, "Initialising task scheduler..          ");
     if(!task_init()) {
@@ -119,6 +130,7 @@ void kernel_main(uint32 mboot_magic, multiboot_info_t * mboot_info) {
     printk(LOG_INFO, "\n");
     printk(LOG_INFO, "Kernel initialisation complete!\n");
 
+    
     task_create("shell", TASK_KERNEL, &shell_init, TASK_STATE_WAITING);
     
     while(true) { }
