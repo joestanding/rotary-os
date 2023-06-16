@@ -81,6 +81,11 @@ _start:
     mov     eax, page_directory
     mov     cr3, eax
 
+    ; Configure CR4 to enable PSE
+    mov     eax, cr4
+    or      eax, 0x10
+    mov     cr4, eax
+
     ; Enable paging
     mov     eax, cr0
     or      eax, 0x80000000
