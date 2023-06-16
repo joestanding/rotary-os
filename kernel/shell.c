@@ -74,9 +74,15 @@ void shell_keyboard_handler(uchar key) {
 
 extern uint32 t1_counter;
 
+void apple() {
+    //task_exit_current();
+    printk(LOG_INFO, "APPLE initialised\n");
+    while(true) { }
+}
+
 void banana() {
     //task_exit_current();
-    printk(LOG_DEBUG, "BANANA initialised\n");
+    printk(LOG_INFO, "BANANA initialised\n");
     while(true) { }
 }
 
@@ -86,6 +92,11 @@ void shell_process_command(char * command) {
         tss_set_esp0((void*)0xDEADBEEF);
         tss_set_ss0(0x10);
         //tss_flush();
+        return;
+    }
+
+    if(strcmp(command, "apple") != 0) {
+        task_create("apple", TASK_KERNEL, &apple, TASK_STATE_WAITING);
         return;
     }
 
@@ -182,14 +193,7 @@ void shell_process_command(char * command) {
     }
 
     if(strcmp(command, "heap") != 0) {
-        block_header * block = (block_header*)heap_start_vaddr;
-        while(block->size != 0) {
-            uint32 trailer_addr = (uint32)block + sizeof(block_header) + block->size;
-            printk(LOG_INFO, "addr %x sz %d us %d pr %x nx %x tr %x\n", block, block->size, block->used,
-                    block->prev_free_block, block->next_free_block, trailer_addr);
-            block = (block_header*)((char*)block + sizeof(block_header) + block->size + sizeof(block_trailer));
-
-        }
+        heap_print();
         return;
     }
 
